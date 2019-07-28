@@ -37,7 +37,6 @@ public class BrewingState {
 
     public void openGUI()
     {
-        //MainHandler.m.player.applyPlayerInteraction(MainHandler.m.player, new Vec3d(pos.getX(), pos.getY(), pos.getZ()), Hand.MAIN_HAND);
         BrewingBot.lookAndClick(playerlook);
     }
 }

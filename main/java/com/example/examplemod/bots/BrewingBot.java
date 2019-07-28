@@ -1,6 +1,7 @@
 package com.example.examplemod.bots;
 
 import com.example.examplemod.MainHandler;
+import com.example.examplemod.util.ExecuteAfter;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.gui.screen.inventory.BrewingStandScreen;
 import net.minecraft.client.settings.KeyBinding;
@@ -66,16 +67,7 @@ public class BrewingBot {
     public static void dropFinal(String display)
     {
         if(equip(display))
-            new Thread(){
-            @Override
-                public void run()
-                {
-                    try {
-                        Thread.sleep(200l);
-                    } catch(Exception e){}
-                    MainHandler.m.player.dropItem(true);
-                }
-            }.start();
+            new ExecuteAfter(200l, n -> {MainHandler.m.player.dropItem(true);});
     }
 
     public static void fillResource(BrewingStandScreen bss, ArrayList<Item> i)
@@ -101,5 +93,38 @@ public class BrewingBot {
             int sn = s.slotNumber;
             MainHandler.m.playerController.windowClick(bss.getContainer().windowId, sn, 1, ClickType.QUICK_MOVE, MainHandler.m.player);
         });
+    }
+
+    static Vec3d water = null;
+    public static void setWaterSource(Vec3d waterSource)
+    {
+        water = waterSource;
+    }
+
+    public static void fillGlassBottles()
+    {
+        if(water!=null)
+        {
+            ArrayList<ItemStack> bottles = new ArrayList<>();
+            MainHandler.m.player.inventory.mainInventory.forEach(is -> {if(is.getDisplayName().getString().equals("Water Bottle")) { bottles.add(
+                    is
+            );}});
+            if(bottles.size()<10) {
+                MainHandler.m.player.closeScreen();
+                BrewingBot.equip("Glass Bottle");
+                BrewingBot.lookAndClick(water);
+                new ExecuteAfter(200l , n -> { BrewingBot.equip("x"); });
+            }
+        }
+    }
+
+    static int amt = 0;
+    public static void autoModeTick()
+    {
+        amt++;
+        MainHandler.m.player.closeScreen();
+        if(BrewingState.states.size()==0) return;
+        BrewingState cur = BrewingState.states.get(amt%BrewingState.states.size());
+        cur.openGUI();
     }
 }
