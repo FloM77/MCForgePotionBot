@@ -11,6 +11,7 @@ import net.minecraft.client.Minecraft;
 import com.example.examplemod.bots.*;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.inventory.BrewingStandScreen;
+import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -26,11 +27,11 @@ import static com.example.examplemod.MainHandler.AutoMode.Running;
 
 public class MainHandler {
 
-    enum ClickState { AddNetherWart, AddSugar, AddGlowstone, none };
+    public enum ClickState { AddNetherWart, AddSugar, AddGlowstone, none };
     static ClickState clickState = ClickState.none;
 
-    enum AutoMode { Running, Stopped };
-    static AutoMode autoMode = Stopped;
+    public enum AutoMode { Running, Stopped };
+    public static AutoMode autoMode = Stopped;
     static AutoMode autoHit = Stopped;
 
 
@@ -52,24 +53,24 @@ public class MainHandler {
         new ChatCommand("wt", s -> {
             BrewingBot.setWaterSource(m.objectMouseOver.getHitVec());
         });
-        new TickedAction(79, n -> BrewingBot.fillGlassBottles(), "water");
+        //new TickedAction(79, n -> BrewingBot.fillGlassBottles(), "water");
         new TickedAction(139, n -> BrewingBot.autoModeTick(), "cycle");
+        new TickedAction(70, n -> {
+            if(autoHit == Running)
+                KeyBinding.onTick(MainHandler.m.gameSettings.keyBindAttack.getKey());
+        }, "hit");
     }
-
+    public static long delay = 400l;
     @SubscribeEvent
     public static void onTick(TickEvent.PlayerTickEvent e)
     {
-        if(tickC==0)
-        {
-
-        }
-        tickC++;
         current = m.currentScreen;
         if(current instanceof BrewingStandScreen && !(last instanceof BrewingStandScreen))
         {
-            onBrewingStandGui();
+            BrewingBot.onBrewingStandGui();
         }
         last = m.currentScreen;
+
         if(clickState != ClickState.none) {
             if (m.objectMouseOver != null) {
                 double x = m.objectMouseOver.getHitVec().x;
@@ -91,19 +92,6 @@ public class MainHandler {
         if(autoMode == Running){
             TickedAction.increment();
         }
-    }
-
-
-    public static void onBrewingStandGui()
-    {
-        System.out.println("Brewing Stand opened");
-
-        BrewingStandScreen bss = (BrewingStandScreen) m.currentScreen;
-
-        BrewingBot.removeBottles(bss);
-        BrewingBot.fillResource(bss, new ArrayList<Item>()
-                {{ add(Items.NETHER_WART); add(Items.SUGAR); add(Items.BLAZE_POWDER); add(Items.GLOWSTONE_DUST); }}
-        );
     }
 
     static{
@@ -147,6 +135,29 @@ public class MainHandler {
 
         new ChatCommand("nodrop", s -> {
             TickedAction.clear("drop");
+        });
+
+        new ChatCommand("hit", s -> {
+            autoHit = Running;
+        });
+
+        new ChatCommand("nohit", s -> {
+            autoHit = Stopped;
+        });
+
+        new ChatCommand("delay", s -> {
+            delay = Long.parseLong(s[1]);
+        });
+
+        new ChatCommand("drink", s -> {
+            if(s.length<2) return;
+            StringBuilder sb = new StringBuilder();
+            for(int i=1;i<s.length;i++)
+            {
+                sb.append(s[i]+  (i == s.length -1 ? "" : " "));
+            }
+            System.out.println(sb.toString());
+            BrewingBot.toDrink = sb.toString();
         });
     }
 }

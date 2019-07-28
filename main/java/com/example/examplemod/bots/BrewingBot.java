@@ -36,14 +36,14 @@ public class BrewingBot {
                 take = false;
             }
             if(take)
-            MainHandler.m.playerController.windowClick(bss.getContainer().windowId, s.slotNumber, 1, ClickType.QUICK_MOVE, MainHandler.m.player);
+            MainHandler.m.playerController.windowClick(bss.getContainer().windowId, s.slotNumber, 0, ClickType.QUICK_MOVE, MainHandler.m.player);
         }
     }
 
     public static void lookAndClick(Vec3d vec)
     {
         MainHandler.m.player.lookAt(EntityAnchorArgument.Type.EYES, vec);
-        KeyBinding.onTick(MainHandler.m.gameSettings.keyBindUseItem.getKey());
+        new ExecuteAfter(MainHandler.delay,n-> KeyBinding.onTick(MainHandler.m.gameSettings.keyBindUseItem.getKey()));
     }
 
     public static boolean equip(String display)
@@ -67,7 +67,7 @@ public class BrewingBot {
     public static void dropFinal(String display)
     {
         if(equip(display))
-            new ExecuteAfter(200l, n -> {MainHandler.m.player.dropItem(true);});
+            new ExecuteAfter(MainHandler.delay/2, n -> {MainHandler.m.player.dropItem(true);});
     }
 
     public static void fillResource(BrewingStandScreen bss, ArrayList<Item> i)
@@ -91,7 +91,9 @@ public class BrewingBot {
         }
         slotR.forEach(s -> {
             int sn = s.slotNumber;
-            MainHandler.m.playerController.windowClick(bss.getContainer().windowId, sn, 1, ClickType.QUICK_MOVE, MainHandler.m.player);
+            new ExecuteAfter(7 * s.slotNumber, n ->
+            MainHandler.m.playerController.windowClick(bss.getContainer().windowId, sn, 0, ClickType.QUICK_MOVE, MainHandler.m.player)
+            );
         });
     }
 
@@ -113,7 +115,7 @@ public class BrewingBot {
                 MainHandler.m.player.closeScreen();
                 BrewingBot.equip("Glass Bottle");
                 BrewingBot.lookAndClick(water);
-                new ExecuteAfter(200l , n -> { BrewingBot.equip("x"); });
+                //new ExecuteAfter(MainHandler.delay , n -> { BrewingBot.equip("x"); });
             }
         }
     }
@@ -126,5 +128,53 @@ public class BrewingBot {
         if(BrewingState.states.size()==0) return;
         BrewingState cur = BrewingState.states.get(amt%BrewingState.states.size());
         cur.openGUI();
+    }
+
+    public static void onBrewingStandGui()
+    {
+        System.out.println("Brewing Stand opened");
+
+        BrewingStandScreen bss = (BrewingStandScreen) MainHandler.m.currentScreen;
+        new ExecuteAfter(MainHandler.delay , n -> {
+        removeBottles(bss);
+        fillResource(bss, new ArrayList<Item>()
+                {{ add(Items.NETHER_WART); add(Items.SUGAR); add(Items.BLAZE_POWDER); add(Items.GLOWSTONE_DUST); }}
+        );
+
+            ArrayList<ItemStack> slotToDrink = new ArrayList<>();
+            MainHandler.m.player.inventory.mainInventory.forEach(s -> { if(s.getStack().getDisplayName().getString().equals(toDrink)) slotToDrink.add(s); });
+            if(slotToDrink.size()>=9) {
+                MainHandler.autoMode = MainHandler.AutoMode.Stopped;
+                drink(toDrink);
+            }
+            else {
+                if(MainHandler.autoMode == MainHandler.AutoMode.Running)
+                new ExecuteAfter(MainHandler.delay, nn -> fillGlassBottles());
+            }
+        });
+    }
+    public static String toDrink = "none";
+    public static void drink(String display)
+    {
+        MainHandler.m.player.closeScreen();
+        MainHandler.m.player.lookAt(EntityAnchorArgument.Type.EYES, new Vec3d(0, 99999, 0));
+        if(equip(display)) {
+            new ExecuteAfter(100l, n ->
+            {
+                KeyBinding.setKeyBindState(MainHandler.m.gameSettings.keyBindUseItem.getKey(), true);
+
+                new ExecuteAfter(2500l, nn -> {
+                    KeyBinding.setKeyBindState(MainHandler.m.gameSettings.keyBindUseItem.getKey(), false);
+
+                    ArrayList<ItemStack> slotToDrink = new ArrayList<>();
+                    MainHandler.m.player.inventory.mainInventory.forEach(s -> { if(s.getStack().getDisplayName().getString().equals(toDrink)) slotToDrink.add(s); });
+                    if(slotToDrink.size()==0) {
+                        MainHandler.autoMode = MainHandler.AutoMode.Running;
+                    }
+                    else {drink(toDrink);}
+                }
+                );
+            });
+        }
     }
 }
